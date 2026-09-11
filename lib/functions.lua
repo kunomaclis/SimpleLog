@@ -97,6 +97,22 @@ local GetEntityByServerId = function(sid)
     return nil;
 end
 
+local InspectEntityByServerId = function(sid)
+    local first, first_index, matches
+    matches = 0
+    for x = 0, 2303 do
+        local ent = GetEntity(x)
+        if ent ~= nil and ent.ServerId == sid then
+            matches = matches + 1
+            if not first then
+                first = ent
+                first_index = x
+            end
+        end
+    end
+    return first, first_index, matches
+end
+
 local GetPartyData = function()
 	local resource = {}
 
@@ -186,19 +202,131 @@ local SearchField = function(message)
 end
 
 local missing_filter_rows = {}
+local ambiguous_entities = {}
+local ambiguous_entity_count = 0
+local relevant_telegraph_actors = {}
+local relevant_telegraph_timeout = 300
 
 local ResetFilterDiagnostics = function()
     missing_filter_rows = {}
+    ambiguous_entities = {}
+    ambiguous_entity_count = 0
+    relevant_telegraph_actors = {}
+end
+
+local ReportAmbiguousEntity = function(entity)
+    if not entity
+        or not entity.ServerId
+        or not gProfileSettings
+        or not gProfileSettings.mode
+        or not gProfileSettings.mode.show_debug_messages
+        or ambiguous_entities[entity.ServerId]
+        or ambiguous_entity_count >= 128 then
+        return
+    end
+
+    local _, entity_index, matches = InspectEntityByServerId(entity.ServerId)
+    ambiguous_entities[entity.ServerId] = true
+    ambiguous_entity_count = ambiguous_entity_count + 1
+    gFuncs.Error(('Ambiguous entity: name=%s id=%s matches=%s index=%s target_index=%s spawn_flags=%s claim=%s race=%s')
+        :fmt(tostring(entity.Name), tostring(entity.ServerId), tostring(matches),
+            tostring(entity_index), tostring(entity.TargetIndex), tostring(entity.SpawnFlags),
+            tostring(entity.ClaimStatus), tostring(entity.Race)))
+end
+
+local IsTelegraph = function(msg)
+    return msg == 3 or msg == 43 or msg == 326 or msg == 327 or msg == 675 or msg == 716
+end
+
+local ResolveTargetFilter = function(target)
+    if not target or target.filter ~= 'other_pets' or not target.owner then
+        return target and target.filter or nil
+    end
+
+    local owner = tostring(target.owner)
+    if owner:match('^p[1-5]$') then
+        return 'party'
+    elseif owner:match('^al[0-5]$') or owner:match('^a2[0-5]$') then
+        return 'alliance'
+    end
+    return target.filter
+end
+
+local IsProtectedTarget = function(target)
+    local target_filter = ResolveTargetFilter(target)
+    return target_filter == 'me'
+        or target_filter == 'party'
+        or target_filter == 'alliance'
+        or target_filter == 'my_pet'
+        or target_filter == 'my_fellow'
+end
+
+local PruneRelevantActors = function(now)
+    for id, last_seen in pairs(relevant_telegraph_actors) do
+        if now - last_seen > relevant_telegraph_timeout then
+            relevant_telegraph_actors[id] = nil
+        end
+    end
+end
+
+local TrackTelegraphActor = function(actor, target, msg)
+    if not IsTelegraph(msg) or not actor or not actor.id or actor.id == 0 then
+        return false
+    end
+
+    local now = os.time()
+    PruneRelevantActors(now)
+
+    local target_manager = AshitaCore:GetMemoryManager():GetTarget()
+    local current_target = target_manager and target_manager:GetServerId(0) or nil
+    local actor_filter = actor.filter
+    local actor_is_candidate = actor.is_npc
+        or not actor_filter
+        or actor_filter == 'enemies'
+        or actor_filter == 'monsters'
+        or actor_filter == 'other_pets'
+    -- A telegraph from the player's current target is intentionally relevant
+    -- even before that actor targets the player or group.
+    if actor_is_candidate and (actor.id == current_target or IsProtectedTarget(target)) then
+        relevant_telegraph_actors[actor.id] = now
+    elseif relevant_telegraph_actors[actor.id] then
+        -- Any later telegraph refreshes the window so long fights retain
+        -- self-targeted readying and casting messages.
+        relevant_telegraph_actors[actor.id] = now
+    end
+    return relevant_telegraph_actors[actor.id] ~= nil
+end
+
+local IsRelevantTelegraphActor = function(actor)
+    if not actor or not actor.id then
+        return false
+    end
+    local last_seen = relevant_telegraph_actors[actor.id]
+    return last_seen ~= nil and os.time() - last_seen <= relevant_telegraph_timeout
 end
 
 local CheckFilter = function(actor, target, category, msg)
     -- This determines whether the message should be displayed or filtered
     -- Returns true (don't filter) or false (filter), boolean
-    if not actor.filter or not target.filter then return false end
+    if not actor or not target or not actor.filter or not target.filter then
+        -- Packet handlers normally resolve both sides first. Fail open if a
+        -- future caller cannot, preserving the game's original message.
+        return true
+    end
 
-    local filtertab = (gProfileFilter[actor.filter] and gProfileFilter[actor.filter][target.filter]) or gProfileFilter[actor.filter]
+    local target_filter = ResolveTargetFilter(target)
+    local actor_filter = actor.filter
+    local relevant_actor = IsTelegraph(msg) and IsRelevantTelegraphActor(actor)
+    if relevant_actor and actor_filter == 'other_pets' and actor.owner == 'other' then
+        actor_filter = 'monsters'
+        if target_filter == 'other_pets' and target.owner == 'other' then
+            target_filter = 'monsters'
+        end
+    end
+
+    local filtertab = (gProfileFilter[actor_filter] and gProfileFilter[actor_filter][target_filter]) or gProfileFilter[actor_filter]
     if type(filtertab) ~= 'table' then
-        local key = tostring(actor.filter) .. ':' .. tostring(target.filter)
+        local key = tostring(actor_filter) .. ':' .. tostring(target_filter)
         if not missing_filter_rows[key] then
             missing_filter_rows[key] = true
             gFuncs.Error('Missing filter row: ' .. key)
@@ -218,7 +346,7 @@ local CheckFilter = function(actor, target, category, msg)
     local casting = msg == 3 or msg == 327 or msg == 716
     local known = melee or ranged or items or uses or damage or misses or healing or readies or casting
 
-    if filtertab['all']
+    local filtered = filtertab['all']
     or melee and filtertab['melee']
     or ranged and filtertab['ranged']
     or items and filtertab['items']
@@ -229,11 +357,8 @@ local CheckFilter = function(actor, target, category, msg)
     or readies and filtertab['readies']
     or casting and filtertab['casting']
     or not known and filtertab['other']
-    then
-        return false
-    end
 
-    return true
+    return not filtered
 end
 
 local ActorNoun = function (msg)
@@ -524,6 +649,8 @@ local exports = {
 	Conjunctions = Conjunctions,
 	SearchField = SearchField,
 	ResetFilterDiagnostics = ResetFilterDiagnostics,
+	ReportAmbiguousEntity = ReportAmbiguousEntity,
+	TrackTelegraphActor = TrackTelegraphActor,
 	CheckFilter = CheckFilter,
 	ActorNoun = ActorNoun,
 	PluralActor = PluralActor,

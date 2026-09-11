@@ -242,11 +242,14 @@ packethandlers.HandleIncomingPacket = function(e)
 
         local actor = gActionHandlers.ActorParse(am.actor_id)
         local target = gActionHandlers.ActorParse(am.target_id)
+        gFuncs.TrackTelegraphActor(actor, target, am.message_id)
         if not actor.filter or not target.filter then
             return
         end
         -- Action message duplicates are safer to block.
-        if check_duplicates(e, true) then return end
+        if check_duplicates(e, true) then
+            return
+        end
         local actor_article = ''
         if gProfileSettings.lang.msg_text ~= 'jp' then
             actor_article = common_nouns:contains(am.actor_id) and 'The ' or ''
@@ -258,7 +261,9 @@ packethandlers.HandleIncomingPacket = function(e)
         targets_condensed = false
 
         -- Filter these messages
-        if not gFuncs.CheckFilter(actor, target, 0, am.message_id) then e.blocked = true end
+        if not gFuncs.CheckFilter(actor, target, 0, am.message_id) then
+            e.blocked = true
+        end
 
         if not actor or not target or e.blocked then -- If the actor or target table is nil or the packet is blocked, ignore the packet
         elseif am.message_id == 800 then -- Spirit bond message
