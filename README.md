@@ -38,6 +38,7 @@ tied to one server.
 
 - Battlemod was created by Byrth.
 - The Ashita port was created by Spiken.
+- Bee and Artoo contributed subsequent updates to the Ashita fork.
 - Action message parsing includes work by Farmboy0.
 - Resource files were created with ResourceExtractor from the Windower Team.
 - Continued maintenance, hardening, profile behavior, and UI work in this fork
