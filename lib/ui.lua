@@ -46,8 +46,8 @@ local filter_info = {
             'Enemy \xef\x8c\x8b Party: All Messages',
             'Enemy \xef\x8c\x8b Alliance: All Messages',
             'Enemy \xef\x8c\x8b Others: All Messages',
-            'Enemy \xef\x8c\x8b My Pet: All Messages',
-            'Enemy \xef\x8c\x8b My Fellow: All Messages',
+            'Enemy \xef\x8c\x8b Your Pet: All Messages',
+            'Enemy \xef\x8c\x8b Your Fellow: All Messages',
             'Enemy \xef\x8c\x8b Other Pets: All Messages',
             'Enemy \xef\x8c\x8b Enemy: All Messages',
             'Enemy \xef\x8c\x8b Monster: All Messages'
@@ -57,8 +57,8 @@ local filter_info = {
             'Monster \xef\x8c\x8b Party: All Messages',
             'Monster \xef\x8c\x8b Alliance: All Messages',
             'Monster \xef\x8c\x8b Others: All Messages',
-            'Monster \xef\x8c\x8b My Pet: All Messages',
-            'Monster \xef\x8c\x8b My Fellow: All Messages',
+            'Monster \xef\x8c\x8b Your Pet: All Messages',
+            'Monster \xef\x8c\x8b Your Fellow: All Messages',
             'Monster \xef\x8c\x8b Other Pets: All Messages',
             'Monster \xef\x8c\x8b Enemy: All Messages',
             'Monster \xef\x8c\x8b Monster: All Messages'
@@ -132,7 +132,7 @@ local function EnableTargetSpecificFilters(actor_key)
     gProfileFilter[actor_key] = nested
 end
 
-local function RenderNestedFilters(actor_key, actor_label)
+local function RenderNestedFilters(actor_key)
     for _, target_label in ipairs(filter_info.filter_categories) do
         local target_key = target_label:lower():gsub(' ', '_')
         local row = gProfileFilter[actor_key][target_key]
@@ -142,9 +142,7 @@ local function RenderNestedFilters(actor_key, actor_label)
             end
             imgui.SameLine()
             imgui.TextColored(theme.header_text_col,
-                ('%s targeting %s: All Messages'):fmt(actor_label, target_labels[target_key]))
-            imgui.TextColored(theme.desc_text_col,
-                ('Filter all messages from %s when targeting %s.'):fmt(actor_label, target_labels[target_key]))
+                ('Targeting %s: All Messages'):fmt(target_labels[target_key]))
 
             if not row.all then
                 for _, filter_label in ipairs(filter_info.filter_order) do
@@ -166,9 +164,10 @@ end
 -- Returns true when the caller should render the actor's general settings.
 local function RenderTargetSpecificOption(actor_key, actor_label)
     if HasNestedFilters(gProfileFilter[actor_key]) then
+        imgui.TextColored(theme.header_text_col, actor_label .. ':')
         imgui.TextColored(theme.desc_text_col,
-            ('%s are configured separately based on who they target.'):fmt(actor_label))
-        RenderNestedFilters(actor_key, actor_label)
+            'Configured separately based on who they target. Checked messages are hidden.')
+        RenderNestedFilters(actor_key)
         return false
     end
 
@@ -730,7 +729,7 @@ ui.render_config = function(toggle)
                                 gProfileFilter.my_pet.all = not gProfileFilter.my_pet.all
                             end
                             imgui.SameLine()
-                            imgui.TextColored(theme.header_text_col, 'My Pet: All Messages')
+                            imgui.TextColored(theme.header_text_col, 'Your Pet: All Messages')
                             imgui.TextColored(theme.desc_text_col, 'Filter all messages from your Pet')
 
                             local my_pet_checkboxes = {}
@@ -779,7 +778,7 @@ ui.render_config = function(toggle)
                                 gProfileFilter.my_fellow.all = not gProfileFilter.my_fellow.all
                             end
                             imgui.SameLine()
-                            imgui.TextColored(theme.header_text_col, 'My Fellow: All Messages')
+                            imgui.TextColored(theme.header_text_col, 'Your Fellow: All Messages')
                             imgui.TextColored(theme.desc_text_col, 'Filter all messages from your Fellows')
 
                             local my_fellow_checkboxes = {}
@@ -892,7 +891,7 @@ ui.render_config = function(toggle)
                     end
                 elseif ui.state.tab == 2 then
                     imgui.TextColored(theme.desc_text_col, 'Colors:')
-                    imgui.TextColored(theme.desc_text_col, 'Colors are customizable based on party / alliance position. Use the colortest button to view the available colors.')
+                    imgui.TextColored(theme.desc_text_col, 'Colors are customizable based on party / alliance position, or by job when Color Names by Job is on. Use the colortest button to view the available colors.')
                     imgui.TextColored(theme.desc_text_col, 'If you wish for a color to be unchanged from its normal color, set it to 0.')
                     imgui.PushStyleColor(ImGuiCol_Button, theme.button_test_colors)
                     imgui.PushStyleColor(ImGuiCol_ButtonHovered, theme.button_hov_col)
