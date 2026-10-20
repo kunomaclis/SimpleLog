@@ -37,7 +37,7 @@ local filter_actors = {
 	{'others', 'Players outside your group'},
 	{'my_pet', 'Your pet'},
 	{'my_fellow', 'Your fellow'},
-	{'other_pets', 'Pets outside your group'},
+	{'other_pets', 'Other pets'},
 	{'enemies', 'Claimed enemies'},
 	{'monsters', 'Unclaimed monsters'},
 }
