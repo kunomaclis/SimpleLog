@@ -407,7 +407,7 @@ actionhandlers.parse_action_packet = function(act)
                 if not gProfileSettings.mode.simplify and gProfileSettings.lang.msg_text == 'jp' then
                     msg = UTF8toSJIS:UTF8_to_SJIS_str_cnv(msg)
                 end
-                if not gProfileColor[act.actor.owner or act.actor.type] then
+                if not gFuncs.NameColor(act.actor) then
                     gFuncs.Error('SimpleLog error, missing filter:'..tostring(act.actor.owner)..' '..tostring(act.actor.type))
                 end
                 if m.fields.status then numb = m.status else numb = gActionHandlers.PrefSuf((m.message == 674 and m.add_effect_param or m.cparam or m.param), m.message,act.actor.damage, col) end
@@ -458,8 +458,8 @@ actionhandlers.parse_action_packet = function(act)
                 :gsub('${weapon_skill}',act.action.weapon_skill or 'ERROR 114')
                 :gsub('${abil}',m.simp_name or 'ERROR 115')
                 :gsub('${numb}',numb..roll or 'ERROR 116')
-                :gsub('${actor}\'s',gFuncs.ColorIt(act.actor.name or 'ERROR 117',gProfileColor[act.actor.owner or act.actor.type])..'\'s'..act.actor.owner_name)
-                :gsub('${actor}',gFuncs.ColorIt(act.actor.name or 'ERROR 117',gProfileColor[act.actor.owner or act.actor.type])..act.actor.owner_name)
+                :gsub('${actor}\'s',gFuncs.ColorIt(act.actor.name or 'ERROR 117',gFuncs.NameColor(act.actor))..'\'s'..act.actor.owner_name)
+                :gsub('${actor}',gFuncs.ColorIt(act.actor.name or 'ERROR 117',gFuncs.NameColor(act.actor))..act.actor.owner_name)
                 :gsub('${target}\'s',targ)
                 :gsub('${target}',targ)
                 :gsub('${lb}','\7'..prefix2)
@@ -527,8 +527,8 @@ actionhandlers.parse_action_packet = function(act)
 						:gsub('${weapon_skill}', act.action.weapon_skill or 'ERROR 130')
 						:gsub('${abil}', m.simp_add_name or act.action.name or 'ERROR 131')
 						:gsub('${numb}', numb or 'ERROR 132')
-						:gsub('${actor}\'s', gFuncs.ColorIt(act.actor.name, gProfileColor[act.actor.owner or act.actor.type]) .. '\'s' .. act.actor.owner_name)
-						:gsub('${actor}', gFuncs.ColorIt(act.actor.name, gProfileColor[act.actor.owner or act.actor.type]) .. act.actor.owner_name)
+						:gsub('${actor}\'s', gFuncs.ColorIt(act.actor.name, gFuncs.NameColor(act.actor)) .. '\'s' .. act.actor.owner_name)
+						:gsub('${actor}', gFuncs.ColorIt(act.actor.name, gFuncs.NameColor(act.actor)) .. act.actor.owner_name)
 						:gsub('${target}\'s', targ)
 						:gsub('${target}', targ)
 						:gsub('${lb}', '\7')
@@ -602,8 +602,8 @@ actionhandlers.parse_action_packet = function(act)
 						:gsub('${weapon_skill}', act.action.weapon_skill or 'ERROR 145')
 						:gsub('${abil}', m.simp_spike_name or act.action.name or 'ERROR 146')
 						:gsub('${numb}', numb or 'ERROR 147')
-						:gsub('${actor}\'s', gFuncs.ColorIt(act.actor.name, gProfileColor[act.actor.owner or act.actor.type]) .. '\'s' .. act.actor.owner_name)
-						:gsub((gProfileSettings.mode.simplify and '${target}' or '${actor}'), gFuncs.ColorIt(act.actor.name, gProfileColor[act.actor.owner or act.actor.type]) .. act.actor.owner_name)
+						:gsub('${actor}\'s', gFuncs.ColorIt(act.actor.name, gFuncs.NameColor(act.actor)) .. '\'s' .. act.actor.owner_name)
+						:gsub((gProfileSettings.mode.simplify and '${target}' or '${actor}'), gFuncs.ColorIt(act.actor.name, gFuncs.NameColor(act.actor)) .. act.actor.owner_name)
 						:gsub('${target}\'s', targ)
 						:gsub((gProfileSettings.mode.simplify and '${actor}' or '${target}'), targ)
 						:gsub('${lb}', '\7')
@@ -940,19 +940,19 @@ actionhandlers.AssembleTargets = function (actor, targs, category, msg, add_effe
         end
         local numb = gProfileSettings.mode.condensetargetname and samename[v.name] > 1 and ' {'..samename[v.name]..'}' or ''
         if i == 1 then
-            name = gFuncs.ColorIt(name, gProfileColor[v.owner or v.type])..v.owner_name
+            name = gFuncs.ColorIt(name, gFuncs.NameColor(v))..v.owner_name
             if samename[v.name] > 1 then
                 targets_condensed = true
             else
                 if (not gProfileSettings.mode.simplify or msg == 206) and #targets == 1 and string.find(res_actmsg[msg][gProfileSettings.lang.msg_text], '${target}\'s') then
-                    name = gFuncs.ColorIt(name, gProfileColor[v.owner or v.type])..(plural_entities:contains(v.id) and '\'' or '\'s')..v.owner_name
+                    name = gFuncs.ColorIt(name, gFuncs.NameColor(v))..(plural_entities:contains(v.id) and '\'' or '\'s')..v.owner_name
                 end
                 targets_condensed = false
             end
             out_str = out_str..article..name..numb
         else
             targets_condensed = true
-            name = gFuncs.ColorIt(name, gProfileColor[v.owner or v.type])..v.owner_name
+            name = gFuncs.ColorIt(name, gFuncs.NameColor(v))..v.owner_name
             out_str = gFuncs.Conjunctions(out_str, article..name..numb, #targets, i)
         end
     end
@@ -970,7 +970,7 @@ end
 
 actionhandlers.ActorParse = function (actor_id)
     local actor_table = gFuncs.GetEntityByServerId(actor_id)
-    local actor_name, typ, dmg, owner, filt, owner_name
+    local actor_name, typ, dmg, owner, filt, owner_name, job, pet
 
     if actor_table == nil then
         return {name=nil, id=actor_id, is_npc=nil, type='debug', owner=nil, owner_name='', race=nil}
@@ -982,6 +982,7 @@ actionhandlers.ActorParse = function (actor_id)
     for i,v in pairs(gFuncs.GetPartyData()) do
         if type(v) == 'table' and v.mob and v.mob.ServerId == actor_table.ServerId then
             typ = i
+            job = v.job
             if i == 'p0' then
                 filt = 'me'
                 dmg = 'mydmg'
@@ -1014,7 +1015,9 @@ actionhandlers.ActorParse = function (actor_id)
                             dmg = 'otherdmg'
                         end
                         owner = i
-                        owner_name = gProfileSettings.mode.showpetownernames and ' ('..gFuncs.ColorIt(v.mob.Name, gProfileColor[owner or typ])..') '
+                        job = v.job
+                        pet = true
+                        owner_name = gProfileSettings.mode.showpetownernames and ' ('..gFuncs.ColorIt(v.mob.Name, gFuncs.NameColor({type = i, job = v.job}))..') '
                         break
                     elseif type(v) == 'table' and v.mob and v.mob.FellowTargetIndex and v.mob.FellowTargetIndex == actor_table.TargetIndex then
                         if i == 'p0' then
@@ -1027,7 +1030,7 @@ actionhandlers.ActorParse = function (actor_id)
                             dmg = 'otherdmg'
                         end
                         owner = i
-                        owner_name = gProfileSettings.mode.showpetownernames and ' ('..gFuncs.ColorIt(v.mob.Name, gProfileColor[owner or typ])..') '
+                        owner_name = gProfileSettings.mode.showpetownernames and ' ('..gFuncs.ColorIt(v.mob.Name, gFuncs.NameColor({type = i, job = v.job}))..') '
                         break
                     end
                 end
@@ -1074,7 +1077,7 @@ actionhandlers.ActorParse = function (actor_id)
         actor_name = actor_table.MonstrosityName
     end
 
-    return {name = actor_name, id = actor_id, is_npc = ActorIsNpc, type = typ, damage = dmg, filter = filt, owner = (owner or nil), owner_name = (owner_name or ''), race = actor_table.Race}
+    return {name = actor_name, id = actor_id, is_npc = ActorIsNpc, type = typ, damage = dmg, filter = filt, owner = (owner or nil), owner_name = (owner_name or ''), race = actor_table.Race, job = job, pet = pet}
 end
 
 actionhandlers.SpellParse = function (act)

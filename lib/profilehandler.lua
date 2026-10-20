@@ -90,7 +90,8 @@ local function ValidateFilterActor(profile, actor_key, actor_label)
 
 	if actor_key == 'enemies' or actor_key == 'monsters' then
 		return ValidateNestedActor(actor, actor_label)
-	elseif actor_key ~= 'other_pets' then
+	elseif actor_key ~= 'party' and actor_key ~= 'alliance'
+		and actor_key ~= 'others' and actor_key ~= 'other_pets' then
 		return ValidateFilterRow(actor, actor_label)
 	end
 
@@ -126,8 +127,16 @@ local function IsProfileValid(profile, profileType)
 		end
 		return true
 	elseif profileType == 'colors' then
-		local valid = next(profile) ~= nil
-		return valid, valid and nil or 'Color profile is empty.'
+		if next(profile) == nil then
+			return false, 'Color profile is empty.'
+		end
+		for key, value in pairs(profile) do
+			if type(key) == 'string' and (key:match('^job_') or key:match('^pet_'))
+				and (type(value) ~= 'number' or value < -1 or value % 1 ~= 0) then
+				return false, key .. ' must be a whole number of -1 or higher.'
+			end
+		end
+		return true
 	end
 	return false, 'Unknown profile type.'
 end

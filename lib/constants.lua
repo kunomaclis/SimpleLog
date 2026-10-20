@@ -299,6 +299,21 @@ static_colors = T{
 	itemcol = 256,
 }
 
+-- Indexed by main job ID. Profiles override these with job_<abbr> and pet_<abbr>.
+-- -1 means use the party position color (jobs) or the owner's job color (pets).
+job_color_keys = {'war','mnk','whm','blm','rdm','thf','pld','drk','bst','brd','rng','sam','nin','drg','smn','blu','cor','pup','dnc','sch','geo','run'}
+
+default_job_colors = {
+	war = 167, mnk = 50, whm = 1, blm = 257, rdm = 3, thf = 204,
+	pld = 221, drk = 259, bst = 63, brd = 4, rng = 256, sam = 262,
+	nin = 38, drg = 209, smn = 6, blu = 219, cor = 5, pup = 161,
+	dnc = -1, sch = -1, geo = -1, run = -1,
+}
+
+default_pet_colors = {
+	bst = 206, drg = 7, smn = 210, pup = 207,
+}
+
 static_settings = T{
 	-- TODO; Language support yet not implemented
 	lang = T{
@@ -320,6 +335,7 @@ static_settings = T{
 		tpstatuses = true,
 		simplify = true,
 		show_debug_messages = false,
+		job_colors = false,
 		showpetownernames = false,
 		crafting = true,
 		showblocks = true,

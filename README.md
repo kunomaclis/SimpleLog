@@ -33,6 +33,10 @@ tied to one server.
   involving party and alliance pets.
 - Supports existing flat filter profiles and explicit target-specific filter
   settings without silently rewriting user profiles.
+- Party, alliance, and outside players can use target-specific filters, such as
+  showing their heals on you while hiding their heals on others.
+- Experimental: optionally colors you, your party, your alliance, and their pets
+  by main job. Turn it on in the `/slog` Colors tab.
 
 ## Project lineage and credits
 

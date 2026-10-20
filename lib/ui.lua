@@ -122,14 +122,14 @@ local function CopyFlatFilters(filters)
     return copy
 end
 
-local function EnableTargetSpecificOtherPets()
-    local flat = gProfileFilter.other_pets
+local function EnableTargetSpecificFilters(actor_key)
+    local flat = gProfileFilter[actor_key]
     local nested = {}
     for _, target_label in ipairs(filter_info.filter_categories) do
         local target_key = target_label:lower():gsub(' ', '_')
         nested[target_key] = CopyFlatFilters(flat)
     end
-    gProfileFilter.other_pets = nested
+    gProfileFilter[actor_key] = nested
 end
 
 local function RenderNestedFilters(actor_key, actor_label)
@@ -161,6 +161,27 @@ local function RenderNestedFilters(actor_key, actor_label)
             end
         end
     end
+end
+
+-- Returns true when the caller should render the actor's general settings.
+local function RenderTargetSpecificOption(actor_key, actor_label)
+    if HasNestedFilters(gProfileFilter[actor_key]) then
+        imgui.TextColored(theme.desc_text_col,
+            ('%s are configured separately based on who they target.'):fmt(actor_label))
+        RenderNestedFilters(actor_key, actor_label)
+        return false
+    end
+
+    imgui.TextColored(theme.desc_text_col,
+        ('These settings currently apply no matter who %s target.'):fmt(actor_label:lower()))
+    local convert = imgui.Button(('Use Separate Settings Based on Target##%s_nested'):fmt(actor_key))
+    imgui.TextColored(theme.desc_text_col,
+        'Your current choices will be copied to every target. Nothing changes on disk until Save Changes.')
+    if convert then
+        EnableTargetSpecificFilters(actor_key)
+        return false
+    end
+    return true
 end
 
 local color_info = {
@@ -235,8 +256,32 @@ local color_info = {
         'Item Color',
     },
     color_inputs = {
-    }
+    },
+    job_inputs = {
+    },
+    pet_names = {
+        bst = 'BST Pet',
+        drg = 'DRG Wyvern',
+        smn = 'SMN Avatar',
+        pup = 'PUP Automaton',
+    },
 };
+
+local function RenderJobColorInput(key, default, label)
+    if not color_info.job_inputs[key] then
+        local value = gProfileColor[key]
+        color_info.job_inputs[key] = T{ type(value) == 'number' and value or default }
+    end
+    imgui.PushItemWidth(30)
+    if imgui.InputInt(('##%s'):fmt(key), color_info.job_inputs[key], 0) then
+        local value = math.max(-1, tonumber(color_info.job_inputs[key][1]) or -1)
+        color_info.job_inputs[key][1] = value
+        gProfileColor[key] = value
+    end
+    imgui.PopItemWidth()
+    imgui.SameLine()
+    imgui.TextColored(theme.header_text_col, label)
+end
 
 ui.state = T{
     button_pressed = false,
@@ -630,48 +675,52 @@ ui.render_config = function(toggle)
                             imgui.TextColored(theme.header_text_col, 'Target')
                             imgui.NewLine()
 
-                            local player_party = imgui.Checkbox('##player_party', {gProfileFilter.party.all})
-                            if player_party then
-                                gProfileFilter.party.all = not gProfileFilter.party.all
-                            end
-                            imgui.SameLine()
-                            imgui.TextColored(theme.header_text_col, 'Party: All Messages')
-                            imgui.TextColored(theme.desc_text_col, 'Filter all Party messages')
+                            if RenderTargetSpecificOption('party', 'Party Members') then
+                                local player_party = imgui.Checkbox('##player_party', {gProfileFilter.party.all})
+                                if player_party then
+                                    gProfileFilter.party.all = not gProfileFilter.party.all
+                                end
+                                imgui.SameLine()
+                                imgui.TextColored(theme.header_text_col, 'Party: All Messages')
+                                imgui.TextColored(theme.desc_text_col, 'Filter all Party messages')
 
-                            local party_checkboxes = {}
-                            if not gProfileFilter.party.all then
-                                for i, v in ipairs(filter_info.filter_order) do
-                                    imgui.TextColored(theme.header_text_col, '\xef\x8c\x8b')
-                                    imgui.SameLine()
-                                    party_checkboxes[i] = imgui.Checkbox(('##party_%s'):fmt(v), {gProfileFilter.party[v:lower()] == true})
-                                    if party_checkboxes[i] then
-                                        gProfileFilter.party[v:lower()] = not gProfileFilter.party[v:lower()]
+                                local party_checkboxes = {}
+                                if not gProfileFilter.party.all then
+                                    for i, v in ipairs(filter_info.filter_order) do
+                                        imgui.TextColored(theme.header_text_col, '\xef\x8c\x8b')
+                                        imgui.SameLine()
+                                        party_checkboxes[i] = imgui.Checkbox(('##party_%s'):fmt(v), {gProfileFilter.party[v:lower()] == true})
+                                        if party_checkboxes[i] then
+                                            gProfileFilter.party[v:lower()] = not gProfileFilter.party[v:lower()]
+                                        end
+                                        imgui.SameLine()
+                                        imgui.TextColored(theme.header_text_col, tostring(v))
                                     end
-                                    imgui.SameLine()
-                                    imgui.TextColored(theme.header_text_col, tostring(v))
                                 end
                             end
                             imgui.NewLine()
 
-                            local player_alliance = imgui.Checkbox('##player_alliance', {gProfileFilter.alliance.all})
-                            if player_alliance then
-                                gProfileFilter.alliance.all = not gProfileFilter.alliance.all
-                            end
-                            imgui.SameLine()
-                            imgui.TextColored(theme.header_text_col, 'Alliance: All Messages')
-                            imgui.TextColored(theme.desc_text_col, 'Filter all Alliance messages')
+                            if RenderTargetSpecificOption('alliance', 'Alliance Members') then
+                                local player_alliance = imgui.Checkbox('##player_alliance', {gProfileFilter.alliance.all})
+                                if player_alliance then
+                                    gProfileFilter.alliance.all = not gProfileFilter.alliance.all
+                                end
+                                imgui.SameLine()
+                                imgui.TextColored(theme.header_text_col, 'Alliance: All Messages')
+                                imgui.TextColored(theme.desc_text_col, 'Filter all Alliance messages')
 
-                            local alliance_checkboxes = {}
-                            if not gProfileFilter.alliance.all then
-                                for i, v in ipairs(filter_info.filter_order) do
-                                    imgui.TextColored(theme.header_text_col, '\xef\x8c\x8b')
-                                    imgui.SameLine()
-                                    alliance_checkboxes[i] = imgui.Checkbox(('##alliance_%s'):fmt(v), {gProfileFilter.alliance[v:lower()] == true})
-                                    if alliance_checkboxes[i] then
-                                        gProfileFilter.alliance[v:lower()] = not gProfileFilter.alliance[v:lower()]
+                                local alliance_checkboxes = {}
+                                if not gProfileFilter.alliance.all then
+                                    for i, v in ipairs(filter_info.filter_order) do
+                                        imgui.TextColored(theme.header_text_col, '\xef\x8c\x8b')
+                                        imgui.SameLine()
+                                        alliance_checkboxes[i] = imgui.Checkbox(('##alliance_%s'):fmt(v), {gProfileFilter.alliance[v:lower()] == true})
+                                        if alliance_checkboxes[i] then
+                                            gProfileFilter.alliance[v:lower()] = not gProfileFilter.alliance[v:lower()]
+                                        end
+                                        imgui.SameLine()
+                                        imgui.TextColored(theme.header_text_col, tostring(v))
                                     end
-                                    imgui.SameLine()
-                                    imgui.TextColored(theme.header_text_col, tostring(v))
                                 end
                             end
                             imgui.NewLine()
@@ -700,25 +749,27 @@ ui.render_config = function(toggle)
                             imgui.EndTabItem()
                         end
                         if imgui.BeginTabItem('Others') then
-                            local others_others = imgui.Checkbox('##others_others', {gProfileFilter.others.all})
-                            if others_others then
-                                gProfileFilter.others.all = not gProfileFilter.others.all
-                            end
-                            imgui.SameLine()
-                            imgui.TextColored(theme.header_text_col, 'Others: All Messages')
-                            imgui.TextColored(theme.desc_text_col, 'Filter all messages from others')
+                            if RenderTargetSpecificOption('others', 'Players Outside Your Group') then
+                                local others_others = imgui.Checkbox('##others_others', {gProfileFilter.others.all})
+                                if others_others then
+                                    gProfileFilter.others.all = not gProfileFilter.others.all
+                                end
+                                imgui.SameLine()
+                                imgui.TextColored(theme.header_text_col, 'Others: All Messages')
+                                imgui.TextColored(theme.desc_text_col, 'Filter all messages from others')
 
-                            local others_checkboxes = {}
-                            if not gProfileFilter.others.all then
-                                for i, v in ipairs(filter_info.filter_order) do
-                                    imgui.TextColored(theme.header_text_col, '\xef\x8c\x8b')
-                                    imgui.SameLine()
-                                    others_checkboxes[i] = imgui.Checkbox(('##others_%s'):fmt(v), {gProfileFilter.others[v:lower()] == true})
-                                    if others_checkboxes[i] then
-                                        gProfileFilter.others[v:lower()] = not gProfileFilter.others[v:lower()]
+                                local others_checkboxes = {}
+                                if not gProfileFilter.others.all then
+                                    for i, v in ipairs(filter_info.filter_order) do
+                                        imgui.TextColored(theme.header_text_col, '\xef\x8c\x8b')
+                                        imgui.SameLine()
+                                        others_checkboxes[i] = imgui.Checkbox(('##others_%s'):fmt(v), {gProfileFilter.others[v:lower()] == true})
+                                        if others_checkboxes[i] then
+                                            gProfileFilter.others[v:lower()] = not gProfileFilter.others[v:lower()]
+                                        end
+                                        imgui.SameLine()
+                                        imgui.TextColored(theme.header_text_col, tostring(v))
                                     end
-                                    imgui.SameLine()
-                                    imgui.TextColored(theme.header_text_col, tostring(v))
                                 end
                             end
                             imgui.NewLine()
@@ -746,37 +797,24 @@ ui.render_config = function(toggle)
                             end
                             imgui.NewLine()
 
-                            if HasNestedFilters(gProfileFilter.other_pets) then
-                                imgui.TextColored(theme.desc_text_col,
-                                    'Pets outside your group are configured separately based on who they target.')
-                                RenderNestedFilters('other_pets', 'Pets Outside Your Group')
-                            else
-                                imgui.TextColored(theme.desc_text_col,
-                                    'These settings currently apply no matter who the pet outside your group targets.')
-                                local convert = imgui.Button('Use Separate Settings Based on Target##other_pets_nested')
-                                imgui.TextColored(theme.desc_text_col,
-                                    'Your current choices will be copied to every target. Nothing changes on disk until Save Changes.')
-                                if convert then
-                                    EnableTargetSpecificOtherPets()
-                                else
-                                    local others_other_pets = imgui.Checkbox('##others_other_pets', {gProfileFilter.other_pets.all})
-                                    if others_other_pets then
-                                        gProfileFilter.other_pets.all = not gProfileFilter.other_pets.all
-                                    end
-                                    imgui.SameLine()
-                                    imgui.TextColored(theme.header_text_col, 'Pets Outside Your Group: All Messages')
-                                    imgui.TextColored(theme.desc_text_col, 'Filter all messages from pets outside your party and alliance.')
+                            if RenderTargetSpecificOption('other_pets', 'Pets Outside Your Group') then
+                                local others_other_pets = imgui.Checkbox('##others_other_pets', {gProfileFilter.other_pets.all})
+                                if others_other_pets then
+                                    gProfileFilter.other_pets.all = not gProfileFilter.other_pets.all
+                                end
+                                imgui.SameLine()
+                                imgui.TextColored(theme.header_text_col, 'Pets Outside Your Group: All Messages')
+                                imgui.TextColored(theme.desc_text_col, 'Filter all messages from pets outside your party and alliance.')
 
-                                    if not gProfileFilter.other_pets.all then
-                                        for _, v in ipairs(filter_info.filter_order) do
-                                            imgui.TextColored(theme.header_text_col, '\xef\x8c\x8b')
-                                            imgui.SameLine()
-                                            if imgui.Checkbox(('##other_pets_%s'):fmt(v), {gProfileFilter.other_pets[v:lower()] == true}) then
-                                                gProfileFilter.other_pets[v:lower()] = not gProfileFilter.other_pets[v:lower()]
-                                            end
-                                            imgui.SameLine()
-                                            imgui.TextColored(theme.header_text_col, tostring(v))
+                                if not gProfileFilter.other_pets.all then
+                                    for _, v in ipairs(filter_info.filter_order) do
+                                        imgui.TextColored(theme.header_text_col, '\xef\x8c\x8b')
+                                        imgui.SameLine()
+                                        if imgui.Checkbox(('##other_pets_%s'):fmt(v), {gProfileFilter.other_pets[v:lower()] == true}) then
+                                            gProfileFilter.other_pets[v:lower()] = not gProfileFilter.other_pets[v:lower()]
                                         end
+                                        imgui.SameLine()
+                                        imgui.TextColored(theme.header_text_col, tostring(v))
                                     end
                                 end
                             end
@@ -898,6 +936,30 @@ ui.render_config = function(toggle)
                         imgui.SameLine()
                         imgui.TextColored(theme.header_text_col, color_info.color_name[i])
                     end
+
+                    imgui.NewLine()
+                    if imgui.Checkbox('##job_colors', {gProfileSettings.mode.job_colors == true}) then
+                        gProfileSettings.mode.job_colors = not gProfileSettings.mode.job_colors
+                    end
+                    imgui.SameLine()
+                    imgui.TextColored(theme.header_text_col, 'Color Names by Job')
+                    imgui.SameLine()
+                    imgui.TextColored({1.0, 0.0, 0.0, 1.0}, 'EXPERIMENTAL')
+                    imgui.TextColored(theme.desc_text_col,
+                        'Colors you, your party, your alliance, and their pets by main job instead of party position. Players outside your group are not affected.')
+
+                    if gProfileSettings.mode.job_colors then
+                        imgui.TextColored(theme.desc_text_col,
+                            'Set a job to -1 to use its party position color. Set a pet to -1 to use its owner\'s job color.')
+                        for _, abbr in ipairs(job_color_keys) do
+                            RenderJobColorInput('job_' .. abbr, default_job_colors[abbr], abbr:upper())
+                        end
+                        for _, abbr in ipairs(job_color_keys) do
+                            if default_pet_colors[abbr] then
+                                RenderJobColorInput('pet_' .. abbr, default_pet_colors[abbr], color_info.pet_names[abbr])
+                            end
+                        end
+                    end
                 end
                 imgui.PopTextWrapPos();
             end
@@ -920,6 +982,7 @@ ui.render_config = function(toggle)
 end
 
 ui.updatecolors = function ()
+    color_info.job_inputs = {}
     for i, v in pairs(gProfileColor) do
         if type(v) == 'table' then
             color_info.color_inputs[i] = v
