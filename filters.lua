@@ -21,7 +21,6 @@ local filters = T{
 		readies = false,	-- Prevents your "Jim readies ____" messages from appearing
 		casting = false,	-- Prevents your "Jim begins casting ____" messages from appearing
 		all = false,		-- Prevents all of your messages from appearing
-		target = true,		-- true = SHOW all actions where I am the target.
 	},
 	
 	party = { -- A party member is doing something

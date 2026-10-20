@@ -620,13 +620,6 @@ ui.render_config = function(toggle)
                     if imgui.BeginTabBar('#filters_bar') then
                         if imgui.BeginTabItem('Player') then
                             RenderFlatFilters('me', 'You')
-                            imgui.TextColored(theme.header_text_col, '\xef\x8c\x8b')
-                            imgui.SameLine()
-                            if imgui.Checkbox('##me_target', {gProfileFilter.me.target == true}) then
-                                gProfileFilter.me.target = not gProfileFilter.me.target
-                            end
-                            imgui.SameLine()
-                            imgui.TextColored(theme.header_text_col, 'Target')
                             imgui.NewLine()
 
                             RenderGroupFilters('party', 'Party')
@@ -634,14 +627,14 @@ ui.render_config = function(toggle)
                             RenderGroupFilters('alliance', 'Alliance')
                             imgui.NewLine()
                             RenderFlatFilters('my_pet', 'Your Pet')
+                            imgui.NewLine()
+                            RenderFlatFilters('my_fellow', 'Your Fellow')
                             imgui.EndTabItem()
                         end
                         if imgui.BeginTabItem('Others') then
                             RenderGroupFilters('others', 'Outside Players', 'Players outside your party and alliance.')
                             imgui.NewLine()
-                            RenderFlatFilters('my_fellow', 'Your Fellow')
-                            imgui.NewLine()
-                            RenderGroupFilters('other_pets', 'Other Pets', 'Every pet except yours, including party and alliance pets.')
+                            RenderGroupFilters('other_pets', 'Pets Except Yours', 'Includes party and alliance pets.')
                             imgui.EndTabItem()
                         end
                         if imgui.BeginTabItem('Enemies') then
