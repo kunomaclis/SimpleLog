@@ -38,6 +38,12 @@ tied to one server.
 - Experimental: optionally colors you, your party, your alliance, and their pets
   by main job. Turn it on in the `/slog` Colors tab.
 
+  ![Default job and pet colors with their chat color codes](docs/job-colors.png)
+
+  Default job colors and their chat color codes. Pets of BST, DRG, SMN, and PUP
+  use a lighter shade of their owner's color. Actual colors can vary with your
+  in-game font color settings.
+
 ## Project lineage and credits
 
 - Battlemod was created by Byrth.
