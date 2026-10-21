@@ -140,6 +140,7 @@ function parse_party(resource, party, mod, count)
 		resource[id]['zone'] = AshitaCore:GetMemoryManager():GetParty():GetMemberZone(index)
 		resource[id]['zone2'] = AshitaCore:GetMemoryManager():GetParty():GetMemberZone2(index)
 		resource[id]['name'] = AshitaCore:GetMemoryManager():GetParty():GetMemberName(index)
+		resource[id]['job'] = AshitaCore:GetMemoryManager():GetParty():GetMemberMainJob(index)
 		resource[id]['mob'] = GetEntity(AshitaCore:GetMemoryManager():GetParty():GetMemberTargetIndex(index))
 	end
 end
@@ -177,6 +178,29 @@ local ColorIt = function (text, color)
 		end
 	end
 	return output
+end
+
+local JobColor = function(entity)
+	local abbr = job_color_keys[entity.job]
+	if not abbr then return nil end
+
+	if entity.pet then
+		local pet_color = gProfileColor['pet_' .. abbr] or default_pet_colors[abbr]
+		if type(pet_color) == 'number' and pet_color >= 0 then
+			return pet_color
+		end
+	end
+	local job_color = gProfileColor['job_' .. abbr] or default_job_colors[abbr]
+	if type(job_color) == 'number' and job_color >= 0 then
+		return job_color
+	end
+	return nil
+end
+
+local NameColor = function(entity)
+	if not entity then return nil end
+	local job_color = gProfileSettings.mode.job_colors and entity.job and JobColor(entity)
+	return job_color or gProfileColor[entity.owner or entity.type]
 end
 
 local Conjunctions = function (pre, post, target_count, current)
@@ -652,6 +676,7 @@ local exports = {
 	ReportAmbiguousEntity = ReportAmbiguousEntity,
 	TrackTelegraphActor = TrackTelegraphActor,
 	CheckFilter = CheckFilter,
+	NameColor = NameColor,
 	ActorNoun = ActorNoun,
 	PluralActor = PluralActor,
 	PluralTarget = PluralTarget,

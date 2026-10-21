@@ -19,6 +19,7 @@ local settings = T{
 		tpstatuses = true,
 		simplify = true,
 		show_debug_messages = false,
+		job_colors = false,
 		showpetownernames = false,
 		crafting = true,
 		showblocks = true,

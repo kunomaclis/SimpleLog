@@ -268,7 +268,7 @@ packethandlers.HandleIncomingPacket = function(e)
         if not actor or not target or e.blocked then -- If the actor or target table is nil or the packet is blocked, ignore the packet
         elseif am.message_id == 800 then -- Spirit bond message
             local status = gFuncs.ColorIt(AshitaCore:GetResourceManager():GetString('buffs.names', am.param_1, gProfileSettings.lang.internal), gProfileColor.statuscol)
-            local targ = gFuncs.ColorIt(target.name or '', gProfileColor[target.owner or target.type])
+            local targ = gFuncs.ColorIt(target.name or '', gFuncs.NameColor(target))
             local number = am.param_2
             local color = gActionHandlers.ColorFilt(res_actmsg[am.message_id].color, Self and am.target_id == Self.ServerId)
             if gProfileSettings.mode.simplify then
@@ -410,12 +410,12 @@ packethandlers.HandleIncomingPacket = function(e)
                 end
             end
             outstr = (gFuncs.CleanMsg(outstr
-            :gsub('${actor}\'s',actor_article..gFuncs.ColorIt(actor.name or '',gProfileColor[actor.owner or actor.type])..'\'s'..actor.owner_name)
-            :gsub('${actor}',actor_article..gFuncs.ColorIt(actor.name or '',gProfileColor[actor.owner or actor.type])..actor.owner_name)
+            :gsub('${actor}\'s',actor_article..gFuncs.ColorIt(actor.name or '',gFuncs.NameColor(actor))..'\'s'..actor.owner_name)
+            :gsub('${actor}',actor_article..gFuncs.ColorIt(actor.name or '',gFuncs.NameColor(actor))..actor.owner_name)
             :gsub('${status}',status or '')
             :gsub('${item}',gFuncs.ColorIt(item or '',gProfileColor.itemcol))
-            :gsub('${target}\'s',target_article..gFuncs.ColorIt(target.name or '',gProfileColor[target.owner or target.type])..'\'s'..target.owner_name)
-            :gsub('${target}',target_article..gFuncs.ColorIt(target.name or '',gProfileColor[target.owner or target.type])..target.owner_name)
+            :gsub('${target}\'s',target_article..gFuncs.ColorIt(target.name or '',gFuncs.NameColor(target))..'\'s'..target.owner_name)
+            :gsub('${target}',target_article..gFuncs.ColorIt(target.name or '',gFuncs.NameColor(target))..target.owner_name)
             :gsub('${spell}',gFuncs.ColorIt(spell or '',gProfileColor.spellcol))
             :gsub('${skill}',gFuncs.ColorIt(skill or '',gProfileColor.abilcol))
             :gsub('${number}',number or '')
