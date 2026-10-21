@@ -28,6 +28,11 @@ local filter_info = {
         'Other',
     },
 
+    -- Shown instead of the setting name, which stays as-is so saved profiles keep working.
+    filter_labels = {
+        other = 'Other (buffs, debuffs, job abilities)',
+    },
+
     filter_categories = {
         'Me',
         'Party',
@@ -104,7 +109,7 @@ local function RenderNestedFilters(actor_key)
                         row[filter_key] = not row[filter_key]
                     end
                     imgui.SameLine()
-                    imgui.TextColored(theme.header_text_col, filter_label)
+                    imgui.TextColored(theme.header_text_col, filter_info.filter_labels[filter_key] or filter_label)
                 end
             end
         end
@@ -131,7 +136,7 @@ local function RenderFlatFilters(actor_key, label, description)
                 row[filter_key] = not row[filter_key]
             end
             imgui.SameLine()
-            imgui.TextColored(theme.header_text_col, filter_label)
+            imgui.TextColored(theme.header_text_col, filter_info.filter_labels[filter_key] or filter_label)
         end
     end
 end
