@@ -761,12 +761,12 @@ ui.save_changes = function ()
         return
     end
     if gStatus.CurrentFilters == ('%s.lua'):fmt(AshitaCore:GetResourceManager():GetString("jobs.names_abbr", gStatus.PlayerJob)) then
-        if not gFileTools.SaveChanges(jobFiltersFile, gProfileFilter, 'filters') then
+        if not gFileTools.SaveChanges(jobFiltersFile, gStatus.PackFilters(gProfileFilter), 'filters') then
             gFuncs.Error('Failed to save filter profile')
             return
         end
     else
-        if not gFileTools.SaveChanges(defaultFiltersFile, gProfileFilter, 'filters') then
+        if not gFileTools.SaveChanges(defaultFiltersFile, gStatus.PackFilters(gProfileFilter), 'filters') then
             gFuncs.Error('Failed to save default_filters.lua')
             return
         end

@@ -90,8 +90,7 @@ local function ValidateFilterActor(profile, actor_key, actor_label)
 
 	if actor_key == 'enemies' or actor_key == 'monsters' then
 		return ValidateNestedActor(actor, actor_label)
-	elseif actor_key ~= 'party' and actor_key ~= 'alliance'
-		and actor_key ~= 'others' and actor_key ~= 'other_pets' then
+	elseif actor_key ~= 'other_pets' then
 		return ValidateFilterRow(actor, actor_label)
 	end
 
@@ -112,6 +111,79 @@ local function ValidateFilterActor(profile, actor_key, actor_label)
 	return ValidateFilterRow(actor, actor_label)
 end
 
+-- Groups whose target-specific settings are saved under by_target. Their own key keeps one
+-- general row, so SimpleLog 1.2.1 still loads the profile and uses that row.
+local split_actors = {
+	{'party', 'Party members'},
+	{'alliance', 'Alliance members'},
+	{'others', 'Players outside your group'},
+}
+
+local function ValidateByTarget(by_target)
+	if by_target == nil then
+		return true
+	end
+	if type(by_target) ~= 'table' then
+		return false, 'Target-specific settings are not a list.'
+	end
+	for key, value in pairs(by_target) do
+		local label
+		for _, actor in ipairs(split_actors) do
+			if actor[1] == key then label = actor[2] end
+		end
+		if not label then
+			return false, 'Target-specific settings include an unknown group: ' .. tostring(key) .. '.'
+		end
+		local valid, validationError = ValidateNestedActor(value, label)
+		if not valid then
+			return false, validationError
+		end
+	end
+	return true
+end
+
+-- Loaded profile -> memory: target-specific rows replace the general row they came with.
+local function ExpandFilters(profile)
+	local by_target = profile.by_target
+	profile.by_target = nil
+	for key, rows in pairs(by_target or {}) do
+		profile[key] = rows
+	end
+	return profile
+end
+
+-- Memory -> saved profile. A split group keeps a general row that hides a message type only
+-- when every target hides it, so older versions never hide something this one shows.
+status.PackFilters = function(filters)
+	local packed, by_target = {}, nil
+	for key, value in pairs(filters) do
+		packed[key] = value
+	end
+	for _, actor in ipairs(split_actors) do
+		local rows = filters[actor[1]]
+		local nested = false
+		for _, value in pairs(rows or {}) do
+			if type(value) == 'table' then nested = true end
+		end
+		if nested then
+			local general = {}
+			for _, row in pairs(rows) do
+				for setting in pairs(row) do general[setting] = true end
+			end
+			for setting in pairs(general) do
+				for _, row in pairs(rows) do
+					if row[setting] ~= true then general[setting] = false end
+				end
+			end
+			packed[actor[1]] = general
+			by_target = by_target or {}
+			by_target[actor[1]] = rows
+		end
+	end
+	packed.by_target = by_target
+	return packed
+end
+
 local function IsProfileValid(profile, profileType)
 	if profileType == 'config' then
 		local valid = type(profile.lang) == 'table'
@@ -125,7 +197,7 @@ local function IsProfileValid(profile, profileType)
 				return false, validationError
 			end
 		end
-		return true
+		return ValidateByTarget(profile.by_target)
 	elseif profileType == 'colors' then
 		if next(profile) == nil then
 			return false, 'Color profile is empty.'
@@ -248,12 +320,12 @@ status.LoadProfile = function(profilePath, profileType)
 				gStatus.FilterSavingDisabled = true
 				return
 			end
-			gProfileFilter = default_profile;
+			gProfileFilter = ExpandFilters(default_profile);
 			gStatus.CurrentFilters = 'default_filters.lua'
 			gStatus.FilterSavingDisabled = false
 			return;
 		else
-			gProfileFilter = profile;
+			gProfileFilter = ExpandFilters(profile);
 			gStatus.FilterWarning = nil
 			gStatus.FilterSavingDisabled = false
 		end
